@@ -1,22 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:shopping_list/data/categories.dart';
 import 'package:shopping_list/models/category.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shopping_list/models/grocery_item.dart';
-import 'package:shopping_list/providers/groceries_items_provider.dart';
 
-class AddNewItemScreen extends ConsumerStatefulWidget {
+class AddNewItemScreen extends StatefulWidget {
   const AddNewItemScreen({
     super.key,
   });
 
   @override
-  ConsumerState<AddNewItemScreen> createState() {
+  State<AddNewItemScreen> createState() {
     return _AddNewItemScreen();
   }
 }
 
-class _AddNewItemScreen extends ConsumerState<AddNewItemScreen> {
+class _AddNewItemScreen extends State<AddNewItemScreen> {
   var _enterdName = '';
   var _eneredQuantity = 1;
   var _selectedCategory = categories[Categories.vegetables];
@@ -25,17 +23,15 @@ class _AddNewItemScreen extends ConsumerState<AddNewItemScreen> {
   void _saveItem() {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      var groceriesList = ref.read(groceriesAddedItems);
 
-      var _groceryItem = GroceryItem(
-        id: (groceriesList.length + 1).toString(),
+      var groceryItem = GroceryItem(
+        id: DateTime.now.toString(),
         name: _enterdName,
         quantity: _eneredQuantity,
         category: _selectedCategory!,
       );
 
-      ref.read(groceriesAddedItems.notifier).updateGroceriesList(_groceryItem);
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(groceryItem);
     }
   }
 
