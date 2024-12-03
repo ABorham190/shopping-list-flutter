@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shopping_list/data/dummy_items.dart';
+import 'package:shopping_list/models/grocery_item.dart';
 import 'package:shopping_list/screens/add_new_item_screen.dart';
 import 'package:shopping_list/widget/groceries_list_item.dart';
 
@@ -13,8 +14,10 @@ class GroceriesScreen extends StatefulWidget {
 }
 
 class _GroceriesScreenState extends State<GroceriesScreen> {
-  void _addNewItem() {
-    Navigator.of(context).push(
+  final List<GroceryItem> _groceryItems = [];
+
+  void _addNewItem() async {
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (ctx) => const AddNewItemScreen(),
       ),
@@ -41,7 +44,7 @@ class _GroceriesScreenState extends State<GroceriesScreen> {
       body: ListView.builder(
         itemCount: groceryItems.length,
         itemBuilder: (ctx, index) => GroceriesListItem(
-          groceryItem: groceryItems[index],
+          groceryItem: groceryItems[groceryItems.length - 1 - index],
         ),
       ),
     );
