@@ -1,23 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:shopping_list/data/dummy_items.dart';
-import 'package:shopping_list/models/grocery_item.dart';
 import 'package:shopping_list/screens/add_new_item_screen.dart';
 import 'package:shopping_list/widget/groceries_list_item.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shopping_list/providers/groceries_items_provider.dart';
 
-class GroceriesScreen extends StatefulWidget {
+class GroceriesScreen extends ConsumerStatefulWidget {
   const GroceriesScreen({
     super.key,
   });
 
   @override
-  State<GroceriesScreen> createState() => _GroceriesScreenState();
+  ConsumerState<GroceriesScreen> createState() => _GroceriesScreenState();
 }
 
-class _GroceriesScreenState extends State<GroceriesScreen> {
-  final List<GroceryItem> _groceryItems = [];
-
-  void _addNewItem() async {
-    await Navigator.of(context).push(
+class _GroceriesScreenState extends ConsumerState<GroceriesScreen> {
+  void _addNewItem() {
+    Navigator.of(context).push(
       MaterialPageRoute(
         builder: (ctx) => const AddNewItemScreen(),
       ),
@@ -26,6 +24,7 @@ class _GroceriesScreenState extends State<GroceriesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    var grocItems = ref.watch(groceriesAddedItems);
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -42,9 +41,9 @@ class _GroceriesScreenState extends State<GroceriesScreen> {
         ],
       ),
       body: ListView.builder(
-        itemCount: groceryItems.length,
+        itemCount: grocItems.length,
         itemBuilder: (ctx, index) => GroceriesListItem(
-          groceryItem: groceryItems[groceryItems.length - 1 - index],
+          groceryItem: grocItems[grocItems.length - 1 - index],
         ),
       ),
     );
