@@ -1,8 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:shopping_list/data/categories.dart';
 import 'package:shopping_list/models/grocery_item.dart';
 import 'package:shopping_list/screens/add_new_item_screen.dart';
 import 'package:shopping_list/widget/groceries_list_item.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 
 class GroceriesScreen extends ConsumerStatefulWidget {
   const GroceriesScreen({
@@ -14,18 +18,60 @@ class GroceriesScreen extends ConsumerStatefulWidget {
 }
 
 class _GroceriesScreenState extends ConsumerState<GroceriesScreen> {
-  final List<GroceryItem> grocItems = [];
+  List<GroceryItem> grocItems = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadItems();
+  }
+
+  void _loadItems() async {
+    final url = Uri.https(
+        'shop-project-3c04c-default-rtdb.firebaseio.com', '/shoping_list.json');
+    final response = await http.get(url);
+    if (response.statusCode >= 400) {
+      setState(() {
+        _errorMessage = 'Faild to download...try again later';
+      });
+      return;
+    }
+    final Map<String, dynamic> listData = json.decode(response.body);
+    final List<GroceryItem> loadedItems = [];
+    for (final item in listData.entries) {
+      final category = categories.entries
+          .firstWhere(
+              (catItem) => catItem.value.title == item.value['category'])
+          .value;
+      loadedItems.add(
+        GroceryItem(
+          id: item.key,
+          name: item.value['name'],
+          quantity: item.value['quantity'],
+          category: category,
+        ),
+      );
+    }
+    setState(() {
+      grocItems = loadedItems;
+      _isLoading = false;
+    });
+    print(loadedItems);
+  }
+
   void _addNewItem() async {
-    var newitem = await Navigator.of(context).push(
+    final addedItem = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (ctx) => const AddNewItemScreen(),
       ),
     );
-    if (newitem == null) {
+    if (addedItem == null) {
       return;
     }
     setState(() {
-      grocItems.add(newitem);
+      grocItems.add(addedItem);
     });
   }
 
@@ -63,6 +109,11 @@ class _GroceriesScreenState extends ConsumerState<GroceriesScreen> {
         ],
       ),
     );
+    if (_isLoading) {
+      activeWidget = const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
 
     if (grocItems.isNotEmpty) {
       activeWidget = ListView.builder(
@@ -84,6 +135,11 @@ class _GroceriesScreenState extends ConsumerState<GroceriesScreen> {
             groceryItem: grocItems[grocItems.length - 1 - index],
           ),
         ),
+      );
+    }
+    if (_errorMessage != null) {
+      activeWidget = Center(
+        child: Text(_errorMessage!),
       );
     }
     return Scaffold(
