@@ -29,36 +29,47 @@ class _GroceriesScreenState extends ConsumerState<GroceriesScreen> {
   }
 
   void _loadItems() async {
-    final url = Uri.https(
-        'shop-project-3c04c-default-rtdb.firebaseio.com', '/shoping_list.json');
-    final response = await http.get(url);
-    if (response.statusCode >= 400) {
+    try {
+      final url = Uri.https('shop-project-3c04c-default-rtdb.firebaseio.com',
+          '/shoping_list.json');
+      final response = await http.get(url);
+      if (response.statusCode >= 400) {
+        setState(() {
+          _errorMessage = 'Faild to download...try again later';
+        });
+        return;
+      }
+      if (response.body == 'null') {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+      final Map<String, dynamic> listData = json.decode(response.body);
+      final List<GroceryItem> loadedItems = [];
+      for (final item in listData.entries) {
+        final category = categories.entries
+            .firstWhere(
+                (catItem) => catItem.value.title == item.value['category'])
+            .value;
+        loadedItems.add(
+          GroceryItem(
+            id: item.key,
+            name: item.value['name'],
+            quantity: item.value['quantity'],
+            category: category,
+          ),
+        );
+      }
       setState(() {
-        _errorMessage = 'Faild to download...try again later';
+        grocItems = loadedItems;
+        _isLoading = false;
       });
-      return;
+    } catch (error) {
+      setState(() {
+        _errorMessage = 'Something went error! Please Try Again Later';
+      });
     }
-    final Map<String, dynamic> listData = json.decode(response.body);
-    final List<GroceryItem> loadedItems = [];
-    for (final item in listData.entries) {
-      final category = categories.entries
-          .firstWhere(
-              (catItem) => catItem.value.title == item.value['category'])
-          .value;
-      loadedItems.add(
-        GroceryItem(
-          id: item.key,
-          name: item.value['name'],
-          quantity: item.value['quantity'],
-          category: category,
-        ),
-      );
-    }
-    setState(() {
-      grocItems = loadedItems;
-      _isLoading = false;
-    });
-    print(loadedItems);
   }
 
   void _addNewItem() async {
@@ -75,25 +86,43 @@ class _GroceriesScreenState extends ConsumerState<GroceriesScreen> {
     });
   }
 
-  void _removeGroceryFromGroceryItems(GroceryItem groceryItem) {
+  void _removeGroceryFromGroceryItems(GroceryItem groceryItem) async {
     final groceryItemIndex = grocItems.indexOf(groceryItem);
     setState(() {
       grocItems.remove(groceryItem);
     });
+    final url = Uri.https('shop-project-3c04c-default-rtdb.firebaseio.com',
+        '/shoping_list/${groceryItem.id}.json');
+    final response = await http.delete(url);
 
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Grocery item removed successfully'),
-        action: SnackBarAction(
-            label: 'Undo',
-            onPressed: () {
-              setState(() {
-                grocItems.insert(groceryItemIndex, groceryItem);
-              });
-            }),
-      ),
-    );
+    if (response.statusCode >= 400) {
+      setState(() {
+        grocItems.insert(groceryItemIndex, groceryItem);
+      });
+
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Not Deleted Successfully',
+          ),
+        ),
+      );
+    }
+
+    // ScaffoldMessenger.of(context).clearSnackBars();
+    // ScaffoldMessenger.of(context).showSnackBar(
+    //   SnackBar(
+    //     content: const Text('Grocery item removed successfully'),
+    //     action: SnackBarAction(
+    //         label: 'Undo',
+    //         onPressed: () {
+    //           setState(() {
+    //             grocItems.insert(groceryItemIndex, groceryItem);
+    //           });
+    //         }),
+    //   ),
+    // );
   }
 
   @override
