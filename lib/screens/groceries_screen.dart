@@ -19,57 +19,41 @@ class GroceriesScreen extends ConsumerStatefulWidget {
 
 class _GroceriesScreenState extends ConsumerState<GroceriesScreen> {
   List<GroceryItem> grocItems = [];
-  bool _isLoading = true;
-  String? _errorMessage;
+  late Future<List<GroceryItem>> gettenItemsList;
 
   @override
   void initState() {
     super.initState();
-    _loadItems();
+    gettenItemsList = _loadItems();
   }
 
-  void _loadItems() async {
-    try {
-      final url = Uri.https('shop-project-3c04c-default-rtdb.firebaseio.com',
-          '/shoping_list.json');
-      final response = await http.get(url);
-      if (response.statusCode >= 400) {
-        setState(() {
-          _errorMessage = 'Faild to download...try again later';
-        });
-        return;
-      }
-      if (response.body == 'null') {
-        setState(() {
-          _isLoading = false;
-        });
-        return;
-      }
-      final Map<String, dynamic> listData = json.decode(response.body);
-      final List<GroceryItem> loadedItems = [];
-      for (final item in listData.entries) {
-        final category = categories.entries
-            .firstWhere(
-                (catItem) => catItem.value.title == item.value['category'])
-            .value;
-        loadedItems.add(
-          GroceryItem(
-            id: item.key,
-            name: item.value['name'],
-            quantity: item.value['quantity'],
-            category: category,
-          ),
-        );
-      }
-      setState(() {
-        grocItems = loadedItems;
-        _isLoading = false;
-      });
-    } catch (error) {
-      setState(() {
-        _errorMessage = 'Something went error! Please Try Again Later';
-      });
+  Future<List<GroceryItem>> _loadItems() async {
+    final url = Uri.https(
+        'shop-project-3c04c-default-rtdb.firebaseio.com', '/shoping_list.json');
+    final response = await http.get(url);
+    if (response.statusCode >= 400) {
+      throw Exception('Unexepected error occured');
     }
+    if (response.body == 'null') {
+      return [];
+    }
+    final Map<String, dynamic> listData = json.decode(response.body);
+    final List<GroceryItem> loadedItems = [];
+    for (final item in listData.entries) {
+      final category = categories.entries
+          .firstWhere(
+              (catItem) => catItem.value.title == item.value['category'])
+          .value;
+      loadedItems.add(
+        GroceryItem(
+          id: item.key,
+          name: item.value['name'],
+          quantity: item.value['quantity'],
+          category: category,
+        ),
+      );
+    }
+    return loadedItems;
   }
 
   void _addNewItem() async {
@@ -127,50 +111,6 @@ class _GroceriesScreenState extends ConsumerState<GroceriesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    Widget activeWidget = Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'Uh..Oh There is no grocries right now',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-        ],
-      ),
-    );
-    if (_isLoading) {
-      activeWidget = const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
-
-    if (grocItems.isNotEmpty) {
-      activeWidget = ListView.builder(
-        itemCount: grocItems.length,
-        itemBuilder: (ctx, index) => Dismissible(
-          key: ValueKey(
-            grocItems[grocItems.length - 1 - index],
-          ),
-          background: Container(
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(.75),
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-          ),
-          onDismissed: (direction) => {
-            _removeGroceryFromGroceryItems(
-              grocItems[grocItems.length - 1 - index],
-            ),
-          },
-          child: GroceriesListItem(
-            groceryItem: grocItems[grocItems.length - 1 - index],
-          ),
-        ),
-      );
-    }
-    if (_errorMessage != null) {
-      activeWidget = Center(
-        child: Text(_errorMessage!),
-      );
-    }
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -186,7 +126,50 @@ class _GroceriesScreenState extends ConsumerState<GroceriesScreen> {
           ),
         ],
       ),
-      body: activeWidget,
+      body: FutureBuilder(
+        future: gettenItemsList,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+
+          if (snapshot.hasError) {
+            return const Center(
+              child: Text('Something get wrong! Please try again later'),
+            );
+          }
+
+          if (snapshot.data!.isEmpty) {
+            return const Center(
+              child: Text(
+                'Uh..Oh There is no grocries right now',
+              ),
+            );
+          }
+          return ListView.builder(
+            itemCount: snapshot.data!.length,
+            itemBuilder: (ctx, index) => Dismissible(
+              key: ValueKey(
+                snapshot.data![snapshot.data!.length - 1 - index],
+              ),
+              background: Container(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(.75),
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+              onDismissed: (direction) => {
+                _removeGroceryFromGroceryItems(
+                  snapshot.data![snapshot.data!.length - 1 - index],
+                ),
+              },
+              child: GroceriesListItem(
+                groceryItem: snapshot.data![snapshot.data!.length - 1 - index],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
